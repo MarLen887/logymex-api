@@ -1,10 +1,13 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'; // Importación de Swagger
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // CRÍTICO: Habilitar CORS primero para permitir peticiones web
+  app.enableCors();
 
   // 1. Configuración de Validaciones Globales
   app.useGlobalPipes(new ValidationPipe({
@@ -12,16 +15,16 @@ async function bootstrap() {
     forbidNonWhitelisted: true,
   }));
 
-  // 2. Configuración de Swagger para LOGYMEX Ambiental
+  // 2. Configuración de Swagger
   const config = new DocumentBuilder()
     .setTitle('LOGYMEX Ambiental API')
     .setDescription('Sistema de Gestión de Residuos Peligrosos y Bitácoras de Recolección')
     .setVersion('1.0')
-    .addBearerAuth() // Permitir pruebas con Token en la interfaz
+    .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document); // Ruta para visualizar la documentación
+  SwaggerModule.setup('api/docs', app, document);
 
   await app.listen(3000);
   console.log(`Servidor corriendo en: http://localhost:3000`);
