@@ -13,26 +13,43 @@ export class UsersService {
     private readonly usersRepository: Repository<User>,
   ) { }
 
-  // 1. Crear usuario con hashing y validación de correo único
-  async create(createUserDto: CreateUserDto): Promise<User> {
-    const { password, email, ...userData } = createUserDto;
+  // Se actualiza para obtener los nuevos campos y forzar la inclusión del password para el login
+  async findOneByUsername(username: string): Promise<User | null> {
+    return this.usersRepository.findOne({
+      where: { username: username.trim() },
+      select: ['id', 'username', 'password', 'firstName', 'lastName', 'position', 'isActive'],
+    });
+  }
+
+  // 1. Crear usuario con hashing y validación de username único
+  async create(createUserDto: CreateUserDto): Promise<User> { // <-- Se restituye el tipado estricto
     try {
-      const hashedPassword = bcrypt.hashSync(password, 10);
+      const hashedPassword = bcrypt.hashSync(createUserDto.password, 10);
+
+      // Construcción explícita del objeto para forzar la inferencia del tipo 'User' singular
       const user = this.usersRepository.create({
-        ...userData,
-        email: email.toLowerCase(),
+        firstName: createUserDto.firstName,
+        lastName: createUserDto.lastName,
+        username: createUserDto.username.trim(),
+        position: createUserDto.position,
         password: hashedPassword,
       });
+
       await this.usersRepository.save(user);
-      delete (user as any).password; // Casting a any para evitar error de TS
+
+      // Eliminamos el password del objeto que se retorna como respuesta HTTP
+      delete (user as any).password;
       return user;
-    } catch (error) {
-      if (error.code === '23505') throw new BadRequestException('El correo ya está registrado.');
+
+    } catch (error: any) {
+      if (error.code === '23505') {
+        throw new BadRequestException('El nombre de usuario ya está registrado.');
+      }
       throw new BadRequestException('Error al crear el usuario.');
     }
   }
 
-  // 2. Obtener todos los usuarios activos (Administradores y Operadores)
+  // 2. Obtener todos los usuarios activos
   async findAll(): Promise<User[]> {
     return await this.usersRepository.find({ where: { isActive: true } });
   }
@@ -44,7 +61,7 @@ export class UsersService {
     return user;
   }
 
-  // 4. Actualizar datos de usuario (incluyendo re-hasheo de password si cambia)
+  // 4. Actualizar datos de usuario
   async update(id: number, updateUserDto: UpdateUserDto): Promise<User> {
     const user = await this.findOne(id);
 
@@ -63,12 +80,5 @@ export class UsersService {
     const user = await this.findOne(id);
     user.isActive = false;
     await this.usersRepository.save(user);
-  }
-  // Este método es exclusivo para el proceso de Login en LOGYMEX
-  async findOneByEmail(email: string) {
-    return await this.usersRepository.findOne({
-      where: { email: email.toLowerCase() },
-      select: ['id', 'email', 'password', 'fullName', 'role'], // Forzamos la selección del password cifrado
-    });
   }
 }
