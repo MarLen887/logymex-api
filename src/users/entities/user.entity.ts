@@ -1,26 +1,33 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
+import { Role } from '../../auth/enums/role.enum'; // Asegurar la ruta correcta al Enum
 
 @Entity('users')
 export class User {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @Column({ unique: true })
-    email: string;
-
-    @Column({ select: false }) // Por seguridad, la contraseña no se incluye en consultas GET
-    password?: string;
+    @Column()
+    firstName: string; // Nombre
 
     @Column()
-    fullName: string;
+    lastName: string; // Apellidos
 
+    @Column({ unique: true })
+    username: string; // Sustituye al email para el acceso
+
+    @Column()
+    password?: string;
+
+    // El puesto se define como un Enum, lo que fuerza a la base de datos 
+    // y a la API a aceptar únicamente las opciones predefinidas.
     @Column({
         type: 'enum',
-        enum: ['admin', 'operator'],
-        default: 'operator'
+        enum: Role,
+        default: Role.OPERADOR
     })
-    role: string;
+    position: Role;
 
+    // integridad y la trazabilidad de las bitácoras
     @Column({ default: true })
     isActive: boolean;
 }

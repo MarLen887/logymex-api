@@ -1,16 +1,24 @@
-import { IsEmail, IsString, MinLength, IsEnum } from 'class-validator';
+import { IsString, IsNotEmpty, IsEnum, MinLength } from 'class-validator';
+import { Role } from '../../auth/enums/role.enum'; // Verifica que esta ruta apunte correctamente a tu Enum
 
 export class CreateUserDto {
-    @IsEmail({}, { message: 'El correo electrónico no es válido' })
-    email: string;
+    @IsString()
+    @IsNotEmpty({ message: 'El nombre es obligatorio' })
+    firstName: string;
 
     @IsString()
-    @MinLength(8, { message: 'La contraseña debe tener al menos 8 caracteres' })
+    @IsNotEmpty({ message: 'Los apellidos son obligatorios' })
+    lastName: string;
+
+    @IsString()
+    @IsNotEmpty({ message: 'El nombre de usuario es obligatorio' })
+    username: string;
+
+    @IsString()
+    @MinLength(6, { message: 'La contraseña debe tener al menos 6 caracteres' })
     password: string;
 
-    @IsString()
-    fullName: string;
-
-    @IsEnum(['admin', 'operator'])
-    role: string;
+    @IsEnum(Role, { message: 'El puesto ingresado no es válido dentro del organigrama' })
+    @IsNotEmpty()
+    position: Role;
 }

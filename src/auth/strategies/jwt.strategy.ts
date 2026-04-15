@@ -16,21 +16,24 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
             jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
             ignoreExpiration: false,
             // 2. Forzamos que el secreto sea tratado como string para evitar el error de tipado
-            secretOrKey: configService.get<string>('JWT_SECRET') || 'fallbackSecret',
+            secretOrKey: configService.get<string>('JWT_SECRET')!,
         });
     }
 
     // Este método se ejecuta automáticamente si el token es válido
-    async validate(payload: { id: number }): Promise<User> {
-        const { id } = payload;
 
-        // Buscamos al usuario en la BD de LOGYMEX para asegurar que no ha sido borrado o desactivado
-        const user = await this.usersService.findOne(id);
+    async validate(payload: any): Promise<User> {
+        // Se emplea payload.sub según el estándar JWT, u opcionalmente payload.id
+        const userId = payload.sub || payload.id;
 
-        if (!user || !user.isActive) {
-            throw new UnauthorizedException('Token no válido o usuario inactivo.');
+        const user = await this.usersService.findOne(userId);
+
+        if (!user) {
+            throw new UnauthorizedException('Acceso denegado. El usuario no se encuentra activo.');
         }
 
-        return user; // NestJS inyecta este usuario en el objeto Request (req.user)
+        // Al retornar la entidad completa, se subsana la falta de propiedades (ts(2739))
+        // NestJS se encargará de inyectar este objeto íntegro en el Request
+        return user;
     }
 }

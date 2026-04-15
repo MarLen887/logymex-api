@@ -17,7 +17,9 @@ import { JwtStrategy } from './strategies/jwt.strategy'; // Importación vital
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET'),
-        signOptions: { expiresIn: '8h' },
+        signOptions: {
+          expiresIn: '30d' // Extiende la validez del token a 30 días exactos
+        },
       }),
     }),
   ],
