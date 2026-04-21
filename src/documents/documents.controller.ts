@@ -32,7 +32,10 @@ export class DocumentsController {
   @UseInterceptors(FileInterceptor('file', {
     // 1. Configuración de almacenamiento local
     storage: diskStorage({
-      destination: './uploads/manifiestos',
+      destination: (req, file, cb) => {
+        // Al usar un callback, evitamos que Multer intente ejecutar 'mkdir'
+        cb(null, './uploads/manifiestos');
+      },
       filename: (req, file, cb) => {
         // Generamos un nombre único para evitar que un archivo sobrescriba a otro
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
