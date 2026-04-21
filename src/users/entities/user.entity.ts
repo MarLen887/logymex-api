@@ -1,5 +1,7 @@
-import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
-import { Role } from '../../auth/enums/role.enum'; // Asegurar la ruta correcta al Enum
+import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
+import { Role } from '../../auth/enums/role.enum';
+import { Waste } from '../../waste/entities/waste.entity';
+
 
 @Entity('users')
 export class User {
@@ -30,4 +32,7 @@ export class User {
     // integridad y la trazabilidad de las bitácoras
     @Column({ default: true })
     isActive: boolean;
+
+    @OneToMany(() => Waste, (waste) => waste.operator)
+    wastes: Waste[];
 }
