@@ -2,14 +2,14 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Res, Req 
 import { WasteService } from './waste.service';
 import { CreateWasteDto } from './dto/create-waste.dto';
 import { UpdateWasteDto } from './dto/update-waste.dto';
-import { AuthGuard } from '@nestjs/passport';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, Param as ApiParamDecorator } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import type { Response } from 'express';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('Residuos de Residuos')
 @ApiBearerAuth()
 @Controller('waste')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(JwtAuthGuard)
 
 export class WasteController {
   constructor(private readonly wasteService: WasteService) { }
