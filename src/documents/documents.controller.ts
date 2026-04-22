@@ -32,6 +32,7 @@ export class DocumentsController {
   @UseInterceptors(FileInterceptor('file', {
     storage: diskStorage({
       destination: (req, file, cb) => {
+        // Al usar un callback, evitamos que Multer intente ejecutar 'mkdir'
         cb(null, './uploads/manifiestos');
       },
       filename: (req, file, cb) => {
