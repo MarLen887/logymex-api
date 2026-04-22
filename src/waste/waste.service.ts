@@ -7,34 +7,42 @@ import { UpdateWasteDto } from './dto/update-waste.dto';
 import * as ExcelJS from 'exceljs';
 import { Response } from 'express';
 
+// Se utiliza require ya que pdfkit-table no tiene tipado oficial en TypeScript
 const PDFDocument = require('pdfkit-table');
 
 @Injectable()
 export class WasteService {
   constructor(
     @InjectRepository(Waste)
-    private wasteRepository: Repository<Waste>,
+    private readonly wasteRepository: Repository<Waste>,
   ) { }
 
-  // 1. Crear registro de residuo (Entrada a inventario)
+  // 1. Crear registro de residuo (Entrada a inventario) vinculando al operador
   async create(createWasteDto: CreateWasteDto, operatorId: number): Promise<Waste> {
     const newWaste = this.wasteRepository.create({
       ...createWasteDto,
-      operator: { id: operatorId }, // Inyectamos la relación dinámicamente
+      // Forzamos el tipado a 'any' temporalmente para que TypeORM acepte la inserción solo por ID
+      operator: { id: operatorId } as any,
     });
     return await this.wasteRepository.save(newWaste);
   }
 
   // 2. Obtener todo el inventario activo
   async findAll(): Promise<Waste[]> {
-    return await this.wasteRepository.find({ where: { isActive: true } });
+    return await this.wasteRepository.find({
+      where: { isActive: true },
+      // eager: true en la entidad ya trae al operador, pero lo declaramos explícito por seguridad
+      relations: ['operator']
+    });
   }
 
   // 3. Método de Búsqueda (Reutilizable y Seguro)
   async findOne(id: number): Promise<Waste> {
     const waste = await this.wasteRepository.findOne({
-      where: { id, isActive: true }
+      where: { id, isActive: true },
+      relations: ['operator']
     });
+
     if (!waste) {
       throw new NotFoundException(`La bitácora con ID ${id} no existe o fue eliminada.`);
     }
@@ -43,29 +51,33 @@ export class WasteService {
 
   // 4. Método PATCH: Actualizar datos de un residuo
   async update(id: number, updateWasteDto: UpdateWasteDto): Promise<Waste> {
-    const waste = await this.findOne(id); // Verificamos que exista
+    const waste = await this.findOne(id); // Verificamos que exista primero
     // Fusionamos los datos nuevos con los existentes
     const updatedWaste = this.wasteRepository.merge(waste, updateWasteDto);
     return await this.wasteRepository.save(updatedWaste);
   }
 
-  // 5. Método DELETE: "Eliminar" residuo (Baja lógica para auditoría)
+  // 5. Método DELETE: Borrado lógico para auditoría legal (NOM-087)
   async remove(id: number): Promise<Waste> {
     const waste = await this.findOne(id);
-    waste.isActive = false; // Desactivamos por auditoría legal, no usamos .delete()
+    waste.isActive = false; // Desactivamos en lugar de eliminar la fila
     return await this.wasteRepository.save(waste);
   }
 
+  // 6. Exportación a Excel (Corregido para solo exportar activos y mostrar Operador)
   async exportToExcel(res: Response): Promise<void> {
-    const wastes = await this.wasteRepository.find();
+    const wastes = await this.wasteRepository.find({
+      where: { isActive: true },
+      relations: ['operator']
+    });
 
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Bitácora LOGYMEX');
 
-    // Aquí defines manualmente el arreglo 'columns'
     worksheet.columns = [
       { header: 'ID', key: 'id', width: 10 },
       { header: 'Fecha de Inicio', key: 'startTime', width: 25 },
+      { header: 'Operador', key: 'operator', width: 30 },
       { header: 'Estado', key: 'status', width: 15 },
       { header: 'Tipo RPBI', key: 'rpbiType', width: 20 },
       { header: 'Envase', key: 'containerType', width: 20 },
@@ -73,11 +85,11 @@ export class WasteService {
       { header: 'Observaciones', key: 'comments', width: 40 },
     ];
 
-    // Mapeo de datos a las filas del Excel
     wastes.forEach(waste => {
       worksheet.addRow({
         id: waste.id,
         startTime: waste.startTime ? new Date(waste.startTime).toLocaleString() : 'N/A',
+        operator: waste.operator ? `${waste.operator.firstName} ${waste.operator.lastName}` : 'Desconocido',
         status: waste.status,
         rpbiType: waste.rpbiType,
         containerType: waste.containerType,
@@ -86,7 +98,6 @@ export class WasteService {
       });
     });
 
-    // Configuración de cabeceras y flujo de salida
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename=Reporte_Ambiental_${Date.now()}.xlsx`);
 
@@ -94,32 +105,29 @@ export class WasteService {
     res.end();
   }
 
+  // 7. Exportación a PDF (Ajustado)
   async exportToPdf(res: Response): Promise<void> {
-    // 1. Obtener datos activos
-    const wastes = await this.wasteRepository.find({ where: { isActive: true } });
+    const wastes = await this.wasteRepository.find({
+      where: { isActive: true },
+      relations: ['operator']
+    });
 
-    // 2. Configurar el lienzo: Tamaño Carta (LETTER), Horizontal (landscape)
     const doc = new PDFDocument({
       margin: 30,
       size: 'LETTER',
       layout: 'landscape',
     });
 
-    // 3. Configurar cabeceras HTTP para renderizado en navegador o descarga
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=Bitacora_LOGYMEX_${Date.now()}.pdf`);
-
-    // 4. Conectar el flujo del documento a la respuesta HTTP
     doc.pipe(res);
 
-    // 5. Encabezado del Documento
     doc.fontSize(18).text('Bitácora de Recolección de RPBI - LOGYMEX Ambiental', { align: 'center' });
-    doc.moveDown(2); // Salto de línea
+    doc.moveDown(2);
 
-    // 6. Construcción Dinámica de la Tabla (Responsiva)
     const table = {
       title: "Registros Históricos Operativos",
-      headers: ["ID", "Fecha de Inicio", "Fecha de Finalización", "Operador", "Estado", "Tipo RPBI", "Envase", "Cantidad"],
+      headers: ["ID", "Inicio", "Fin", "Operador", "Estado", "Tipo RPBI", "Envase", "Cantidad"],
       rows: wastes.map(waste => [
         waste.id.toString(),
         waste.startTime ? new Date(waste.startTime).toLocaleString() : 'N/A',
@@ -132,14 +140,12 @@ export class WasteService {
       ]),
     };
 
-    // 7. Renderizar la tabla ajustándose automáticamente al ancho de la hoja
     await doc.table(table, {
       prepareHeader: () => doc.font('Helvetica-Bold').fontSize(10),
       prepareRow: () => doc.font('Helvetica').fontSize(9),
-      width: 730, // Ancho calculado para hoja carta horizontal con márgenes de 30
+      width: 730,
     });
 
-    // 8. Finalizar y cerrar el archivo
     doc.end();
   }
 }
