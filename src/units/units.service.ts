@@ -22,14 +22,16 @@ export class UnitsService {
   }
 
   async findOne(id: number): Promise<Unit> {
-    const unit = await this.unitsRepository.findOneBy({ id });
-    if (!unit) throw new NotFoundException(`La unidad con ID ${id} no existe.`);
+    // CORRECCIÓN DE SEGURIDAD: Evitar devolver unidades dadas de baja
+    const unit = await this.unitsRepository.findOne({ where: { id, isActive: true } });
+    if (!unit) throw new NotFoundException(`La unidad con ID ${id} no existe o fue dada de baja.`);
     return unit;
   }
 
   async update(id: number, updateUnitDto: UpdateUnitDto): Promise<Unit> {
     const unit = await this.findOne(id);
-    const updatedUnit = Object.assign(unit, updateUnitDto);
+    // MEJORA: merge fusiona los datos de forma segura para TypeORM
+    const updatedUnit = this.unitsRepository.merge(unit, updateUnitDto);
     return await this.unitsRepository.save(updatedUnit);
   }
 
