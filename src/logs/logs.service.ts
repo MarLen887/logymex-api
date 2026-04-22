@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Log } from './entities/log.entity';
 import { CreateLogDto } from './dto/create-log.dto';
+//prueba git
 
 @Injectable()
 export class LogsService {
