@@ -1,26 +1,30 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { CreateWasteDto } from './dto/create-waste.dto';
-import { UpdateWasteDto } from './dto/update-waste.dto';
+import { Waste } from './entities/waste.entity';
 
 @Injectable()
 export class WasteService {
-  create(createWasteDto: CreateWasteDto) {
-    return 'This action adds a new waste';
+  constructor(
+    @InjectRepository(Waste)
+    private readonly wasteRepository: Repository<Waste>,
+  ) { }
+
+  async create(createWasteDto: CreateWasteDto) {
+    const newWaste = this.wasteRepository.create(createWasteDto);
+    return await this.wasteRepository.save(newWaste);
   }
 
-  findAll() {
-    return `This action returns all waste`;
+  async findAll() {
+    return await this.wasteRepository.find();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} waste`;
-  }
-
-  update(id: number, updateWasteDto: UpdateWasteDto) {
-    return `This action updates a #${id} waste`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} waste`;
+  async remove(id: string) {
+    const waste = await this.wasteRepository.findOneBy({ id });
+    if (!waste) {
+      throw new NotFoundException(`El residuo con ID ${id} no existe`);
+    }
+    return await this.wasteRepository.remove(waste);
   }
 }
