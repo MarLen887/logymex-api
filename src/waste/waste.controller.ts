@@ -6,7 +6,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Role } from '../auth/enums/role.enum';
 
-@UseGuards(JwtAuthGuard, RolesGuard) // 🛡️ Exigimos Token JWT en todas las rutas
+@UseGuards(JwtAuthGuard, RolesGuard) // Exigimos Token JWT en todas las rutas
 @Controller('waste')
 export class WasteController {
   constructor(private readonly wasteService: WasteService) { }

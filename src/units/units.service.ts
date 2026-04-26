@@ -1,26 +1,44 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { CreateUnitDto } from './dto/create-unit.dto';
-import { UpdateUnitDto } from './dto/update-unit.dto';
+import { Unit } from './entities/unit.entity';
 
 @Injectable()
 export class UnitsService {
-  create(createUnitDto: CreateUnitDto) {
-    return 'This action adds a new unit';
+  constructor(
+    @InjectRepository(Unit)
+    private readonly unitRepository: Repository<Unit>,
+  ) { }
+
+  async create(createUnitDto: CreateUnitDto) {
+    const unitExists = await this.unitRepository.findOneBy({ placas: createUnitDto.placas });
+    if (unitExists) {
+      throw new BadRequestException(`El vehículo con placas ${createUnitDto.placas} ya está registrado`);
+    }
+
+    const newUnit = this.unitRepository.create(createUnitDto);
+    return await this.unitRepository.save(newUnit);
   }
 
-  findAll() {
-    return `This action returns all units`;
+  async findAll() {
+    return await this.unitRepository.find();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} unit`;
+  async updateStatus(id: string, estatus: string) {
+    const unit = await this.unitRepository.findOneBy({ id });
+    if (!unit) {
+      throw new NotFoundException(`La unidad con ID ${id} no existe`);
+    }
+    unit.estatus = estatus;
+    return await this.unitRepository.save(unit);
   }
 
-  update(id: number, updateUnitDto: UpdateUnitDto) {
-    return `This action updates a #${id} unit`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} unit`;
+  async remove(id: string) {
+    const unit = await this.unitRepository.findOneBy({ id });
+    if (!unit) {
+      throw new NotFoundException(`La unidad con ID ${id} no existe`);
+    }
+    return await this.unitRepository.remove(unit);
   }
 }
