@@ -9,8 +9,11 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // CRÍTICO: Habilitar CORS primero para permitir peticiones web
-  app.enableCors();
-
+  app.enableCors({
+    origin: true, // Permite cualquier origen (especialmente el puerto dinámico de Flutter)
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    credentials: true,
+  });
   // 1. Configuración de Validaciones Globales
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
