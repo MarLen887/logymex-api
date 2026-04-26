@@ -1,26 +1,19 @@
-import { Injectable } from '@nestjs/common';
-import { CreateFileDto } from './dto/create-file.dto';
-import { UpdateFileDto } from './dto/update-file.dto';
+import { Injectable, BadRequestException } from '@nestjs/common';
 
 @Injectable()
 export class FilesService {
-  create(createFileDto: CreateFileDto) {
-    return 'This action adds a new file';
-  }
 
-  findAll() {
-    return `This action returns all files`;
-  }
+  handleFileUpload(file: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('No se recibió ningún archivo');
+    }
 
-  findOne(id: number) {
-    return `This action returns a #${id} file`;
-  }
-
-  update(id: number, updateFileDto: UpdateFileDto) {
-    return `This action updates a #${id} file`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} file`;
+    // Retornamos la ruta donde se guardó la imagen para que la App móvil 
+    // pueda adjuntarla a la creación de la bitácora.
+    return {
+      mensaje: 'Archivo subido correctamente',
+      fileName: file.filename,
+      path: `/uploads/${file.filename}`,
+    };
   }
 }
