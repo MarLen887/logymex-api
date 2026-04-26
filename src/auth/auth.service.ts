@@ -1,26 +1,44 @@
-import { Injectable } from '@nestjs/common';
-import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { UsersService } from '../users/users.service';
+import { JwtService } from '@nestjs/jwt';
+import { LoginDto } from './dto/login.dto';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
-  create(createAuthDto: CreateAuthDto) {
-    return 'This action adds a new auth';
-  }
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly jwtService: JwtService,
+  ) { }
 
-  findAll() {
-    return `This action returns all auth`;
-  }
+  async login(loginDto: LoginDto) {
+    // 1. Buscar al empleado por su usuario
+    const user = await this.usersService.findOneByUsername(loginDto.usuario);
+    if (!user) {
+      throw new UnauthorizedException('Credenciales incorrectas');
+    }
 
-  findOne(id: number) {
-    return `This action returns a #${id} auth`;
-  }
+    // 2. Verificar que no lo hayan dado de baja de LOGYMEX
+    if (!user.isActive) {
+      throw new UnauthorizedException('Usuario inactivo. Contacte a su administrador.');
+    }
 
-  update(id: number, updateAuthDto: UpdateAuthDto) {
-    return `This action updates a #${id} auth`;
-  }
+    // 3. Comparar la contraseña que escribió con la encriptada en PostgreSQL
+    const isPasswordValid = await bcrypt.compare(loginDto.contrasena, user.contrasena);
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Credenciales incorrectas');
+    }
 
-  remove(id: number) {
-    return `This action removes a #${id} auth`;
+    // 4. Generar el Token JWT (El gafete de acceso válido por 12 horas)
+    const payload = { sub: user.id, usuario: user.usuario, rol: user.rol };
+
+    return {
+      access_token: await this.jwtService.signAsync(payload),
+      user: {
+        nombres: user.nombres,
+        apellidos: user.apellidos,
+        rol: user.rol
+      }
+    };
   }
 }

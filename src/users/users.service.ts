@@ -37,4 +37,10 @@ export class UsersService {
 
     return userWithoutPassword;
   }
+
+  // Función para que el módulo de Auth busque al usuario por su nombre de usuario
+  async findOneByUsername(usuario: string) {
+    return this.userRepository.findOneBy({ usuario });
+  }
+
 }
