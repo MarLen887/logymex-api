@@ -29,9 +29,9 @@ import { ReportsModule } from './reports/reports.module';
         port: configService.get<number>('DB_PORT'),
         username: configService.get<string>('DB_USER'),
         password: configService.get<string>('DB_PASSWORD'),
-        database: configService.get<string>('DB_NAME'),
-        autoLoadEntities: true, // Carga las tablas automáticamente
-        synchronize: true, // ⚠️ CUIDADO: true solo para desarrollo. Sincroniza el código con la DB.
+        database: configService.get<string>('DB_NAME'), // Leemos la variable del .env
+        autoLoadEntities: true,
+        synchronize: true,
       }),
     }),
 

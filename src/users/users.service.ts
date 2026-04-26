@@ -1,26 +1,40 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
-  create(createUserDto: CreateUserDto) {
-    return 'This action adds a new user';
-  }
+  constructor(
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+  ) { }
 
-  findAll() {
-    return `This action returns all users`;
-  }
+  async create(createUserDto: CreateUserDto) {
+    // 1. Verificar si el usuario ya existe en la base de datos
+    const userExists = await this.userRepository.findOneBy({ usuario: createUserDto.usuario });
+    if (userExists) {
+      throw new BadRequestException('Este nombre de usuario ya está registrado.');
+    }
 
-  findOne(id: number) {
-    return `This action returns a #${id} user`;
-  }
+    // 2. Encriptar la contraseña
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(createUserDto.contrasena, saltRounds);
 
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
-  }
+    // 3. Crear el nuevo usuario reemplazando la contraseña plana por la encriptada
+    const newUser = this.userRepository.create({
+      ...createUserDto,
+      contrasena: hashedPassword,
+    });
 
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+    // 4. Guardar en PostgreSQL
+    const savedUser = await this.userRepository.save(newUser);
+
+    // 5. Extraer la contraseña y devolver el resto de los datos (Técnica TypeScript)
+    const { contrasena, ...userWithoutPassword } = savedUser;
+
+    return userWithoutPassword;
   }
 }
