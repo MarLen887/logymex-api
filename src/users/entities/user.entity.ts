@@ -1,35 +1,35 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Role } from '../../auth/enums/role.enum';
 
-@Entity('users') // Nombre de la tabla en PostgreSQL
+@Entity('users')
 export class User {
     @PrimaryGeneratedColumn('uuid')
-    id: string;
+    id!: string;
 
     @Column({ type: 'varchar', length: 100 })
-    nombres: string;
+    nombres!: string;
 
     @Column({ type: 'varchar', length: 100 })
-    apellidos: string;
+    apellidos!: string;
 
     @Column({ type: 'varchar', length: 50, unique: true })
-    usuario: string; // Único para que no haya dos empleados con el mismo usuario
+    usuario!: string; 
 
     @Column({ type: 'varchar' })
-    contrasena: string; // Aquí guardaremos la contraseña, pero la encriptaremos
+    contrasena!: string; 
 
     @Column({ type: 'varchar', length: 15 })
-    telefono: string;
+    telefono!: string;
 
     @Column({ type: 'enum', enum: Role, default: Role.OPERADOR })
-    rol: Role;
+    rol!: Role;
 
     @Column({ type: 'boolean', default: true })
-    isActive: boolean; // Control para dar de alta/baja al personal
+    isActive!: boolean;
 
     @CreateDateColumn()
-    createdAt: Date;
+    createdAt!: Date;
 
     @UpdateDateColumn()
-    updatedAt: Date;
+    updatedAt!: Date;
 }
